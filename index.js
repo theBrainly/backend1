@@ -38,6 +38,11 @@ function compileCode(filePath, language, res) {
     }
   
     exec(command, (err, stdout, stderr) => {
+        fs.unlink(filePath, (unlinkErr) => {
+            if (unlinkErr) {
+              console.error(`Failed to delete file: ${unlinkErr.message}`);
+            }
+          });
       if (err) {
         // Compilation failed
         return res.status(400).json({
@@ -57,8 +62,15 @@ function compileCode(filePath, language, res) {
 
 
 app.post('/api/run', (req, res) => {
-    const { fileName, content, language } = req.body;
-
+    let fileName=""
+    const {  content, language } = req.body;
+    if(language ==="java"){
+         fileName="text.java"
+    }else if(language ==="cpp"){
+        fileName="text.cpp"
+    }else if(language ==="js"){
+        fileName="text.js"
+    }
     if (!fileName || !content || !language) {
       return res.status(400).json({ error: 'File name, content, and language are required.' });
     }
