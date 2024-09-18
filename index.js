@@ -9,12 +9,29 @@ app.use(cors());
 const fs = require("fs");
 const path = require("path");
 const { exec } = require("child_process");
+const { log } = require("console");
 
 app.get("/", (req, res) => {
   res.send("Welcome to my API!");
 });
 
 const FILE_DIR = path.join(__dirname, "./files");
+function extractErrorMessage(stderr,language) {
+  // Regex to match file paths (e.g., /Users/akashsharma/Documents/project/backend/files/fileName.cpp)
+  var filePathRegex = "";
+  if(language==="cpp"){
+    filePathRegex=/\/[^\s]+\.cpp/g
+  }
+  
+  // Remove all file paths from the stderr
+  const cleanedStderr = stderr.replace(filePathRegex, "");
+
+  // Optional: you can also trim any leading/trailing spaces if necessary
+  const finalErrorMessage = cleanedStderr.trim();
+
+  return finalErrorMessage;
+}
+
 
 // Function to compile code
 function compileCode(filePath, language, res) {
@@ -36,7 +53,8 @@ function compileCode(filePath, language, res) {
       default:
         return res.status(400).json({ error: 'Unsupported language.' });
     }
-  
+    
+    console.log(`Executing command: ${command}`);
     exec(command, (err, stdout, stderr) => {
         fs.unlink(filePath, (unlinkErr) => {
             if (unlinkErr) {
@@ -44,10 +62,15 @@ function compileCode(filePath, language, res) {
             }
           });
       if (err) {
+        
         // Compilation failed
+        const errorMessage = extractErrorMessage(stderr,language);
+        console.error(`Compilation error: ${errorMessage}`);
         return res.status(400).json({
           success: false,
-          error: stderr || 'Compilation failed.'
+          
+          
+          error: errorMessage|| 'Compilation failed.'
         });
       }
   
@@ -64,17 +87,11 @@ function compileCode(filePath, language, res) {
 app.post('/api/run', (req, res) => {
     let fileName=""
     const {  content, language } = req.body;
-    if(language ==="java"){
-         fileName="text.java"
-    }else if(language ==="cpp"){
-        fileName="text.cpp"
-    }else if(language ==="js"){
-        fileName="text.js"
-    }
+    fileName="text"+"."+language;
     if (!fileName || !content || !language) {
       return res.status(400).json({ error: 'File name, content, and language are required.' });
     }
-
+    console.log(content)
   const codeFilePath = path.join(FILE_DIR, "fileName.cpp");
 
   fs.writeFile(codeFilePath, content, "utf8", (err) => {
